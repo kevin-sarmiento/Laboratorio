@@ -2,33 +2,53 @@ package biblioteca;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
-        ReservaFacade fachada = new ReservaFacade(
-                new RepositorioSalasMemoria(),
-                new RepositorioReservasMemoria(),
-                List.of(new NotificadorEstudiante(), new RegistroEventos())
-        );
+        Reserva reservaCancelada = crearReserva("E001", "Laura");
+        agregarObservadores(reservaCancelada);
 
-        Estudiante estudiante = new Estudiante("E001", "Laura");
-        LocalDate fecha = LocalDate.now().plusDays(7);
-        LocalTime hora = LocalTime.of(14, 0);
+        System.out.println("Prueba 1: confirmar y cancelar una reserva");
+        System.out.println("Estado inicial: " + reservaCancelada.getNombreEstado());
+        reservaCancelada.confirmar();
+        System.out.println("Después de confirmar: " + reservaCancelada.getNombreEstado());
+        reservaCancelada.cancelar();
+        System.out.println("Después de cancelar: " + reservaCancelada.getNombreEstado());
+        try {
+            reservaCancelada.confirmar();
+        } catch (IllegalStateException e) {
+            System.out.println("Error esperado al confirmar una cancelada: " + e.getMessage());
+        }
+        System.out.println("Estado final: " + reservaCancelada.getNombreEstado());
 
-        System.out.println("Por capacidad, para 4 personas:");
-        fachada.realizarReserva(estudiante, fecha, hora, 2, 4,
-                new SeleccionPorCapacidad())
-                .ifPresent(Reserva::cancelar);
+        Reserva reservaFinalizada = crearReserva("E002", "Carlos");
+        agregarObservadores(reservaFinalizada);
 
-        System.out.println("Sala preferida C, para 4 personas:");
-        fachada.realizarReserva(estudiante, fecha, hora, 2, 4,
-                new SeleccionSalaPreferida("C"))
-                .ifPresent(System.out::println);
+        System.out.println("\nPrueba 2: finalizar una reserva confirmada");
+        reservaFinalizada.confirmar();
+        reservaFinalizada.finalizar();
+        System.out.println("Después de finalizar: " + reservaFinalizada.getNombreEstado());
+        try {
+            reservaFinalizada.cancelar();
+        } catch (IllegalStateException e) {
+            System.out.println("Error esperado al cancelar una finalizada: " + e.getMessage());
+        }
+        System.out.println("Estado final: " + reservaFinalizada.getNombreEstado());
+    }
 
-        System.out.println("Sala preferida B, para 7 personas:");
-        fachada.realizarReserva(estudiante, fecha, hora, 2, 7,
-                new SeleccionSalaPreferida("B"))
-                .ifPresent(System.out::println);
+    private static Reserva crearReserva(String identificador, String nombre) {
+        return new ReservaBuilder()
+                .estudiante(new Estudiante(identificador, nombre))
+                .fecha(LocalDate.now().plusDays(7))
+                .horaInicio(LocalTime.of(14, 0))
+                .duracionHoras(2)
+                .cantidadPersonas(4)
+                .sala(new Sala("B", "Sala B", 4))
+                .build();
+    }
+
+    private static void agregarObservadores(Reserva reserva) {
+        reserva.agregarObservador(new NotificadorEstudiante());
+        reserva.agregarObservador(new RegistroEventos());
     }
 }
